@@ -1,0 +1,45 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+    inputs:
+      wormholy_tag:
+        description: 'The tag to base the release on from the Wormholy'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-tags: true
+
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+
+    - name: Install xcbeautify
+      run: brew install xcbeautify
+
+    - name: Build Wormholy XCFramework
+      run: |
+        if ! .github/bootstrap.sh ${{ inputs.wormholy_tag }}; then
+          echo "❌ Failed to build Wormholy XCFramework"
+          exit 1
+        fi
+
+    - name: Commit changes for release
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Updated for Wormholy ${{ inputs.wormholy_tag }}
+        tagging_message: ${{ inputs.wormholy_tag }}
+        file_pattern: "bin/*.xcframework.zip"
+
